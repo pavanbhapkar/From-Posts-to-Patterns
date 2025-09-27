@@ -85,6 +85,19 @@ def get_daily_mood(username, days=30):
     ]
     return trend
 
+# --- Detect sudden drops ---
+def detect_alerts(trend, drop_threshold=0.4):
+    alerts = []
+    for i in range(1, len(trend)):
+        prev = trend[i - 1]["avg_compound"]
+        curr = trend[i]["avg_compound"]
+        if prev - curr >= drop_threshold:
+            alerts.append({
+                "date": trend[i]["date"],
+                "message": f"⚠️ Sudden mood drop detected: {prev:.2f} → {curr:.2f}"
+            })
+    return alerts
+
 # --- ROUTES ---
 @app.route("/api/fetch/<username>")
 def api_fetch(username):
@@ -94,7 +107,9 @@ def api_fetch(username):
 @app.route("/api/mood_trend/<username>")
 def api_mood(username):
     days = int(request.args.get("days", 30))
-    return jsonify(get_daily_mood(username, days))
+    trend = get_daily_mood(username, days)
+    alerts = detect_alerts(trend)
+    return jsonify({"trend": trend, "alerts": alerts})
 
 @app.route("/dashboard/<username>")
 def dashboard(username):

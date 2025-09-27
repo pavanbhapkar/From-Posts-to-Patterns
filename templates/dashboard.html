@@ -2,18 +2,47 @@
 <html>
 <head>
   <title>Mood dashboard - {{username}}</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f8;
+    }
+    h2 {
+      color: #333;
+    }
+    #alerts {
+      margin-top: 20px;
+      padding: 10px;
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      border-radius: 8px;
+      color: #856404;
+      display: none; /* hidden until alerts exist */
+    }
+    .alert-item {
+      margin-bottom: 8px;
+    }
+  </style>
 </head>
 <body>
   <h2>Mood Trend for {{username}}</h2>
   <canvas id="moodChart" width="800" height="300"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <div id="alerts">
+    <h3>⚠️ Alerts</h3>
+    <div id="alerts-list"></div>
+  </div>
+
   <script>
     fetch(`/api/mood_trend/{{username}}?days=60`)
       .then(r => r.json())
       .then(data => {
-        const labels = data.map(d => d.date);
-        const values = data.map(d => d.avg_compound);
+        // --- Chart ---
+        const trend = data.trend;
+        const labels = trend.map(d => d.date);
+        const values = trend.map(d => d.avg_compound);
 
         new Chart(document.getElementById("moodChart").getContext('2d'), {
           type: "line",
@@ -32,8 +61,22 @@
             plugins: { legend: { display: true } }
           }
         });
+
+        // --- Alerts ---
+        const alerts = data.alerts || [];
+        if (alerts.length > 0) {
+          const alertBox = document.getElementById("alerts");
+          const list = document.getElementById("alerts-list");
+          list.innerHTML = "";
+          alerts.forEach(a => {
+            const div = document.createElement("div");
+            div.className = "alert-item";
+            div.textContent = `${a.date}: ${a.message}`;
+            list.appendChild(div);
+          });
+          alertBox.style.display = "block";
+        }
       });
   </script>
 </body>
 </html>
-    
