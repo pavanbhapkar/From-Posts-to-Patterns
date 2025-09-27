@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <title>Mood dashboard - {{username}}</title>
+</head>
+<body>
+  <h2>Mood Trend for {{username}}</h2>
+  <canvas id="moodChart" width="800" height="300"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    fetch(`/api/mood_trend/{{username}}?days=60`)
+      .then(r => r.json())
+      .then(data => {
+        const labels = data.map(d => d.date);
+        const values = data.map(d => d.avg_compound);
+
+        new Chart(document.getElementById("moodChart").getContext('2d'), {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "Sentiment (compound score)",
+              data: values,
+              fill: false,
+              borderColor: "blue",
+              tension: 0.2
+            }]
+          },
+          options: {
+            scales: { y: { min: -1, max: 1 } },
+            plugins: { legend: { display: true } }
+          }
+        });
+      });
+  </script>
+</body>
+</html>
+    
