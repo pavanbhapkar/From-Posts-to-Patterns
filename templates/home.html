@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Reddit Wellness Tracker — Home</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f6f8; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+    .card { background:white; padding:28px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); width:420px; }
+    input[type="text"] { width:100%; padding:10px; margin-top:8px; border-radius:6px; border:1px solid #ddd; font-size:16px; }
+    button { margin-top:12px; padding:10px 14px; border-radius:8px; border:0; background:#1976d2; color:white; font-weight:600; cursor:pointer; }
+    .note { margin-top:12px; font-size:13px; color:#555; }
+    .error { margin-top:12px; color:#b00020; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Reddit Wellness Tracker</h2>
+    <p>Enter a Reddit username to analyze their submissions (title + body).</p>
+    <form method="post">
+      <input name="username" placeholder="Reddit username (e.g. spez)" required />
+      <button type="submit">Analyze</button>
+    </form>
+    {% if error %}
+      <div class="error">Error: {{ error }}</div>
+    {% endif %}
+    <div class="note">
+      This tool uses VADER sentiment on publicly visible Reddit submissions. Do not use without consent for sensitive actions.
+    </div>
+  </div>
+</body>
+</html>
