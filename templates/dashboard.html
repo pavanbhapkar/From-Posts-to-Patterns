@@ -1,172 +1,143 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>Dashboard — {{username}}</title>
+  <title>Equinox Dashboard - {{username}}</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background:#f2f4f7; margin:20px; }
-    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    .card { background:white; border-radius:10px; padding:16px; box-shadow:0 8px 20px rgba(0,0,0,0.06); margin-bottom:16px; }
-    .row { display:flex; gap:16px; align-items:center; }
-    .small { font-size:14px; color:#555; }
-    #alerts { background:#fff3cd; border:1px solid #ffeeba; padding:12px; border-radius:8px; display:none; color:#856404; }
-    .alert-item { margin-bottom:8px; }
-    button { padding:8px 12px; border-radius:8px; border:0; background:#1976d2; color:white; cursor:pointer; }
-    canvas { width:100% !important; height:320px !important; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 20px;
+      background: #121212;
+      color: #E0E0E0;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    header img {
+      width: 60px;
+      height: 60px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #40E0D0;
+    }
+    header p {
+      margin: 0;
+      font-size: 14px;
+      color: #A0A0A0;
+    }
+    h2 {
+      color: #40E0D0;
+      margin-bottom: 10px;
+    }
+    #alerts {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(64, 224, 208, 0.1);
+      border: 1px solid #40E0D0;
+      border-radius: 8px;
+      color: #40E0D0;
+      display: none;
+    }
+    .alert-item {
+      margin-bottom: 8px;
+    }
+    canvas {
+      background: #1E1E1E;
+      border-radius: 8px;
+      padding: 10px;
+    }
   </style>
 </head>
 <body>
   <header>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Equinox Logo">
     <div>
-      <h2>Wellness Dashboard</h2>
-      <div class="small">User: <strong>{{username}}</strong></div>
-    </div>
-    <div>
-      <button id="refetchBtn">Refetch & analyze</button>
-      <a href="/" style="margin-left:12px; color:#1976d2;">Analyze another user</a>
+      <h1>Equinox</h1>
+      <p>Balancing minds, one insight at a time.</p>
     </div>
   </header>
 
-  <div id="summary" class="card">
-    <div class="row">
-      <div><strong>Posts fetched:</strong> <span id="fetchedCount">—</span></div>
-      <div style="margin-left:18px;"><strong>Days shown:</strong> <span id="daysShown">—</span></div>
-    </div>
+  <h2>Mood Trend for {{username}}</h2>
+  <canvas id="moodChart" width="800" height="300"></canvas>
+
+  <div id="alerts">
+    <h3>⚠️ Alerts</h3>
+    <div id="alerts-list"></div>
   </div>
 
-  <div class="card">
-    <h3>Daily mood (last <span id="daysLabel">60</span> days)</h3>
-    <canvas id="dailyChart"></canvas>
-    <div id="alerts" style="margin-top:12px;">
-      <strong>⚠️ Alerts</strong>
-      <div id="alertsList"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Monthly average (last 6 months)</h3>
-    <canvas id="monthlyChart" style="height:220px;"></canvas>
-  </div>
-
-<script>
-const username = "{{username}}";
-const DAYS = 60;
-document.getElementById('daysLabel').innerText = DAYS;
-
-let dailyChart = null;
-let monthlyChart = null;
-
-async function fetchAndRender() {
-  // 1) fetch (also triggers server-side analysis)
-  const fetchResp = await fetch(`/api/fetch/${username}`);
-  const fetchJson = await fetchResp.json();
-  document.getElementById('fetchedCount').innerText = fetchJson.fetched ?? 0;
-
-  // 2) get mood trend (includes alerts)
-  const trendResp = await fetch(`/api/mood_trend/${username}?days=${DAYS}`);
-  const trendJson = await trendResp.json();
-  const trend = trendJson.trend || [];
-  const alerts = trendJson.alerts || [];
-
-  document.getElementById('daysShown').innerText = trend.length || 0;
-
-  // Prepare daily chart data
-  const labels = trend.map(x => x.date);
-  const values = trend.map(x => x.avg_compound);
-
-  renderDailyChart(labels, values, alerts);
-
-  // 3) monthly
-  const mnResp = await fetch(`/api/monthly/${username}?months=6`);
-  const mnJson = await mnResp.json();
-  const mnLabels = mnJson.map(m => m.month).reverse(); // show older->recent
-  const mnValues = mnJson.map(m => m.avg_compound).reverse();
-
-  renderMonthlyChart(mnLabels, mnValues);
-  renderAlerts(alerts);
-}
-
-function renderDailyChart(labels, values, alerts) {
-  const ctx = document.getElementById('dailyChart').getContext('2d');
-  // Build scatter points: mark alert points red
-  const pointBackground = labels.map((lbl, i) => {
-    // find if this index is in alerts
-    const found = alerts.find(a => a.index === i);
-    return found ? 'red' : 'rgba(33,150,243,0.9)';
-  });
-
-  if (dailyChart) dailyChart.destroy();
-  dailyChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Avg compound',
-        data: values,
-        borderColor: 'rgba(33,150,243,0.9)',
-        backgroundColor: 'rgba(33,150,243,0.05)',
-        pointBackgroundColor: pointBackground,
-        pointRadius: 4,
-        fill: true,
-        tension: 0.2
-      }]
-    },
-    options: {
-      scales: { y: { min: -1, max: 1 } },
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` ${ctx.parsed.y.toFixed(3)}`
-          }
+  <script>
+    // Step 1: Fetch posts first
+    fetch(`/api/fetch/{{username}}`)
+      .then(r => r.json())
+      .then(fetchData => {
+        if (fetchData.fetched > 0) {
+          // Step 2: Fetch mood trend
+          return fetch(`/api/mood_trend/{{username}}?days=60`);
+        } else {
+          throw new Error("No posts fetched for this user.");
         }
-      }
-    }
-  });
-}
+      })
+      .then(r => r.json())
+      .then(data => {
+        const trend = data.trend || [];
+        if (trend.length === 0) {
+          alert("No recent posts to plot!");
+          return;
+        }
 
-function renderMonthlyChart(labels, values) {
-  const ctx = document.getElementById('monthlyChart').getContext('2d');
-  if (monthlyChart) monthlyChart.destroy();
-  monthlyChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Monthly avg compound',
-        data: values,
-        backgroundColor: 'rgba(255,152,0,0.85)'
-      }]
-    },
-    options: { scales: { y: { min: -1, max: 1 } } }
-  });
-}
+        const labels = trend.map(d => d.date);
+        const values = trend.map(d => d.avg_compound);
 
-function renderAlerts(alerts) {
-  const box = document.getElementById('alerts');
-  const list = document.getElementById('alertsList');
-  list.innerHTML = '';
-  if (!alerts || alerts.length === 0) {
-    box.style.display = 'none';
-    return;
-  }
-  box.style.display = 'block';
-  alerts.forEach(a => {
-    const div = document.createElement('div');
-    div.className = 'alert-item';
-    div.textContent = `${a.date}: ${a.message}`;
-    list.appendChild(div);
-  });
-}
+        new Chart(document.getElementById("moodChart").getContext('2d'), {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "Sentiment (compound score)",
+              data: values,
+              fill: true,
+              borderColor: "#40E0D0",
+              backgroundColor: "rgba(64,224,208,0.15)",
+              tension: 0.25,
+              pointRadius: 4,
+              pointBackgroundColor: "#40E0D0"
+            }]
+          },
+          options: {
+            scales: { 
+              y: { min: -1, max: 1, ticks: { color: "#E0E0E0" } },
+              x: { ticks: { color: "#E0E0E0" } }
+            },
+            plugins: { 
+              legend: { labels: { color: "#E0E0E0" } }
+            }
+          }
+        });
 
-// wire up refetch button
-document.getElementById('refetchBtn').addEventListener('click', () => {
-  document.getElementById('fetchedCount').innerText = '...';
-  fetchAndRender();
-});
-
-// initial
-fetchAndRender();
-</script>
+        // Show alerts if any
+        const alerts = data.alerts || [];
+        if (alerts.length > 0) {
+          const alertBox = document.getElementById("alerts");
+          const list = document.getElementById("alerts-list");
+          list.innerHTML = "";
+          alerts.forEach(a => {
+            const div = document.createElement("div");
+            div.className = "alert-item";
+            div.textContent = `${a.date}: ${a.message}`;
+            list.appendChild(div);
+          });
+          alertBox.style.display = "block";
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error loading posts or mood trend.");
+      });
+  </script>
 </body>
 </html>
