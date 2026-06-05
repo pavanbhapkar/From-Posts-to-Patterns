@@ -3,7 +3,10 @@
 ***Balancing minds, one insight at a time.***
 
 ---
-
+## Contributors
+- Prerana Sinha
+- Pavan Bhapkar
+- Om Bansal
 ## **Project Overview**
 
 Mental health issues like anxiety and depression often go undetected. While individuals frequently share their struggles on platforms like Reddit, there is no structured way to convert these posts into actionable insights.
